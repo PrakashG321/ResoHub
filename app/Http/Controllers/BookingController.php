@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreBookingLogRequest;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
+use App\Models\BookingLog;
+use App\Services\BookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class BookingController extends Controller
 {
@@ -21,8 +25,9 @@ class BookingController extends Controller
             if ($bookings->isEmpty()) {
                 return response()->json([
                     "message" => "No bookings found"
-                ], 204);
+                ], 200);
             }
+
             return response()->json([
                 "booking" => $bookings
             ]);
@@ -56,14 +61,22 @@ class BookingController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreBookingRequest $request): JsonResponse
+    public function store(StoreBookingRequest $request, BookingService $bookingService, StoreBookingLogRequest $bookingLogRequest): JsonResponse
     {
         try {
             $attributes = $request->validated();
-            $booking = Booking::create($attributes);
+            $attributes['user_id'] = Auth::id();
+            $bookingLogAttributes = $bookingLogRequest->validated();
+            $result = $bookingService->createBooking($attributes, $bookingLogAttributes);
+            if (isset($result['error'])) {
+                return response()->json([
+                    'error' => $result['error']
+                ], $result['code'] ?? 400);
+            }
+
             return response()->json([
                 "message" => "Resource booked successfully",
-                "booking" => $booking
+                "booking" => $result['book']
             ], 201);
         } catch (\Exception $error) {
             return response()->json([
@@ -71,24 +84,28 @@ class BookingController extends Controller
             ], 400);
         }
     }
-
     /**
      * Display the specified resource.
      */
-    public function show(Booking $booking): JsonResponse
+    public function show(Booking $book): JsonResponse
     {
         try {
-            if ($booking->isEmpty()) {
+            if ($book->user_id != Auth::id()) {
                 return response()->json([
-                    "message" => ""
-                ], 200);
+                    'error' => 'Unauthorized access to this booking.'
+                ], 403);
+            }
+            if ($book->status === 'cancelled') {
+                return response()->json([
+                    'error' => 'This booking has been cancelled.'
+                ], 404);
             }
             return response()->json([
-                "booking" => $booking
+                'booking' => $book
             ], 200);
         } catch (\Exception $error) {
             return response()->json([
-                "error" => $error->getMessage()
+                'error' => $error->getMessage()
             ], 400);
         }
     }
@@ -96,15 +113,25 @@ class BookingController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateBookingRequest $request, Booking $booking)
+    public function update(UpdateBookingRequest $request,BookingService $bookingService, StoreBookingLogRequest $bookingLogRequest, Booking $book)
     {
         try {
             $attributes = $request->validated();
-            $booking->update($attributes);
+            $attributes["user_id"] = Auth::id();
+            $bookingLogAttributes = $bookingLogRequest->validated();
+
+
+           $result = $bookingService->updateBooking($attributes, $bookingLogAttributes, $book);
+            if (isset($result['error'])) {
+                return response()->json([
+                    'error' => $result['error']
+                ], $result['code'] ?? 400);
+            }
+
             return response()->json([
-                "message" => "booking updated successfully",
-                "booking" => $booking
-            ], 200);
+                "message" => "Resource booked successfully",
+                "booking" => $result['book']
+            ], 201);
         } catch (\Exception $error) {
             return response()->json([
                 "error" => $error->getMessage()
@@ -115,16 +142,92 @@ class BookingController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Booking $booking): JsonResponse
+    public function cancel(Booking $book, StoreBookingLogRequest $request): JsonResponse
     {
         try {
-            $booking->delete();
+            $book->update([
+                'status' => 'cancelled'
+            ]);
+
+            $bookinglogAttributes = $request->validated();
+            $bookinglogAttributes['changed_by'] = Auth::id();
+            $bookinglogAttributes['booking_id'] = $book->id;
+            $bookinglogAttributes['status'] = $book->status;
+
+            BookingLog::create($bookinglogAttributes);
+
             return response()->json([
-                "message" => "you have cancelled your booking"
+                'message' => 'Booking cancelled'
             ], 200);
         } catch (\Exception $error) {
             return response()->json([
-                "error" => $error->getMessage()
+                'error' => $error->getMessage()
+            ], 400);
+        }
+    }
+
+
+    public function approve(Booking $book, StoreBookingLogRequest $request): JsonResponse
+    {
+        try {
+
+            Gate::authorize('approve', $book);
+            
+            if ($book->status !== 'pending') {
+                return response()->json([
+                    'error' => 'Booking cannot be approved as it is not in pending status.'
+                ], 400);
+            }
+
+            $book->update([
+                'status' => 'approved'
+            ]);
+
+            $bookinglogAttributes = $request->validated();
+            $bookinglogAttributes['changed_by'] = Auth::id();
+            $bookinglogAttributes['booking_id'] = $book->id;
+            $bookinglogAttributes['status'] = $book->status;
+
+            BookingLog::create($bookinglogAttributes);
+
+            return response()->json([
+                'message' => 'Booking approved'
+            ], 200);
+        } catch (\Exception $error) {
+            return response()->json([
+                'error' => $error->getMessage()
+            ], 400);
+        }
+    }
+
+    public function reject(Booking $book, StoreBookingLogRequest $request): JsonResponse
+    {
+        try {
+
+            Gate::authorize('approve', $book);
+            if ($book->status != 'pending') {
+                return response()->json([
+                    'error' => 'Booking cannot be approved as it is not in pending status.'
+                ], 400);
+            }
+
+            $book->update([
+                'status' => 'rejected'
+            ]);
+
+            $bookinglogAttributes = $request->validated();
+            $bookinglogAttributes['changed_by'] = Auth::id();
+            $bookinglogAttributes['booking_id'] = $book->id;
+            $bookinglogAttributes['status'] = $book->status;
+
+
+            BookingLog::create($bookinglogAttributes);
+            return response()->json([
+                'message' => 'Booking approved'
+            ], 200);
+        } catch (\Exception $error) {
+            return response()->json([
+                'error' => $error->getMessage()
             ], 400);
         }
     }

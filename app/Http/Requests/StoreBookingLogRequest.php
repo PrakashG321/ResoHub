@@ -22,8 +22,6 @@ class StoreBookingLogRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'changed_by' => 'required|integer|exists:users,id',
-            'booking_id' => 'required|integer|exists:bookings,id',
             'comment' => 'nullable|string|max:1000',
         ];
     }

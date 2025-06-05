@@ -57,11 +57,6 @@ class ResourceController extends Controller
     public function show(Resource $resource): JsonResponse
     {
         try {
-            if ($resource->isEmpty()) {
-                return response()->json([
-                    "message" => "no resource found for this id"
-                ], 200);
-            }
             return response()->json([
                 "resource" => $resource
             ], 201);

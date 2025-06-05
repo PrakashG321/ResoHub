@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignIdFor(Booking::class)->constrained()->onDelete('cascade');
             $table->text('comment')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled'])->default('pending');
-            $table->timestamps();
+            $table->timestamps();   
         });
     }
 
