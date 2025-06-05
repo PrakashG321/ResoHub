@@ -63,4 +63,36 @@ class BookingPolicy
     {
         return false;
     }
+
+    public function approve(User $user, Booking $booking): bool
+    {
+        return $this->canHandle($user, $booking);
+    }
+
+    public function reject(User $user, Booking $booking): bool
+    {
+        return $this->canHandle($user, $booking);
+    }
+
+    private function canHandle(User $user, Booking $booking): bool
+    {
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        $roleResourceMap = [
+            'computer_lab_supervisor' => 'Lab',
+            'library_supervisor' => 'Library',
+            'venue_supervisor' => 'Venue',
+            'sports_equipment_supervisor' => 'Sports',
+        ];
+
+        foreach ($roleResourceMap as $role => $resourceType) {
+            if ($user->hasRole($role)) {
+                return $booking->resource->resource_type->name === $resourceType;
+            }
+        }
+
+        return false;
+    }
 }

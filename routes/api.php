@@ -22,12 +22,14 @@ Route::middleware('auth:api')->group(function () {
         Route::apiResource('resource-types', ResourceTypeController::class);
         Route::get('/book', [BookingController::class, 'index']);
         Route::get('/booking-logs', [BookingLogController::class, 'index']);
+        Route::post('/{book}/approve', [BookingController::class,'approve']);
+        Route::post('/{book}/reject', [BookingController::class,'reject']);
     });
 
     Route::middleware('role:faculty|student')->group(function () {
-        Route::apiResource('book', BookingController::class)->except(['index']);
+        Route::apiResource('book', BookingController::class)->except(['index', 'destroy']);
+        Route::post('/book/{book}', [BookingController::class, 'cancel']);
         Route::get('/own-bookings', [BookingController::class, 'showOwnBooking']);
         Route::get('/own-booking-logs', [BookingLogController::class, 'showOwnBookingLog']);
-        Route::post('/booking-logs', [BookingLogController::class, 'store']);
     });
 });
