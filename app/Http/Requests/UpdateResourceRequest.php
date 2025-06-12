@@ -25,7 +25,7 @@ class UpdateResourceRequest extends FormRequest
             'name' => 'required|string|max:20',
             'resource_type_id' => 'required|integer|exists:resource_types,id',
             'description' => 'required|string|max:255',
-            'capacity' => 'required|string|max:100',
+            'capacity' => 'required|integer|max:100',
         ];
     }
 }

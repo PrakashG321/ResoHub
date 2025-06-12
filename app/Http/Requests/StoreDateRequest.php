@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreBookingLogRequest extends FormRequest
+class StoreDateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,7 +22,7 @@ class StoreBookingLogRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'comment' => 'nullable|string|max:1000',
+            'date' => 'required|date_format:Y-m-d'
         ];
     }
 }

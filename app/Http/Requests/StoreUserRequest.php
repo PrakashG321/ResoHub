@@ -24,8 +24,9 @@ class StoreUserRequest extends FormRequest
         return [
             'name'     => ['required', 'string', 'max:255', 'regex:/^[A-Za-z\s]+$/'],
             'email'    => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role' => 'required|string|in:student,faculty'
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'personal_email' => ['required', 'email'],
+            'role' => ['required', 'string', 'in:student,faculty']
 
         ];
     }

@@ -55,7 +55,7 @@ class ResourceTypeController extends Controller
     public function show(ResourceType $resourceType): JsonResponse
     {
         try {
-            if ($resourceType->isEmpty()) {
+            if (!$resourceType) {
                 return response()->json([
                     "message" => "No resource type found for this id"
                 ], 200);

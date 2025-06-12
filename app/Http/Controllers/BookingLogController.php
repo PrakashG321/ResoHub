@@ -24,7 +24,6 @@ class BookingLogController extends Controller
                     "message" => "no bookinglogs found"
                 ], 200);
             }
-
             return response()->json([
                 "bookingLog" => $bookingLog
             ], 200);
@@ -49,23 +48,5 @@ class BookingLogController extends Controller
             ]);
         }
     }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreBookingLogRequest $request): JsonResponse
-    {
-        try {
-            $attributes = $request->validated();
-            $bookingLogs = BookingLog::create($attributes);
-            return response()->json([
-                "message" => "Bookking Log created successfully",
-                "bookingLogs" => $bookingLogs
-            ], 200);
-        } catch (\Exception $error) {
-            return response()->json([
-                "error" => $error->getMessage()
-            ], 500);
-        }
-    }
+   
 }

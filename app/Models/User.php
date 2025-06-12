@@ -4,7 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
-use App\Policies\BookingLogsPolicy;
+use App\Notifications\PersonalEmailVerificationNotification;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -13,7 +14,7 @@ use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasRoles, HasApiTokens, HasFactory, Notifiable;
@@ -28,6 +29,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'personal_email',
         'password',
     ];
 
@@ -62,6 +64,25 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    // Used by Laravel to send email verification
+    public function sendEmailVerificationNotification()
+    {
+        $this->notify(new PersonalEmailVerificationNotification());
+    }
+
+    // Override: Send email to personal_email, not email
+    public function getEmailForVerification()
+    {
+        return $this->personal_email;
+    }
+
+
+    public function routeNotificationForMail()
+    {
+        return $this->personal_email ?? $this->email;
+    }
+
 
     protected static function booted()
     {
