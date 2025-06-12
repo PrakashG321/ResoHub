@@ -92,11 +92,11 @@ class RolePermissionSeeder extends Seeder
             'view all booking logs',
         ]);
 
-        $seminarHallSupervisor = Role::firstOrCreate([
-            'name' => 'seminar_hall_supervisor',
+        $venueSupervisor = Role::firstOrCreate([
+            'name' => 'venue_hall_supervisor',
             'guard_name' => 'api'
         ]);
-        $seminarHallSupervisor->syncPermissions([
+        $venueSupervisor->syncPermissions([
             'manage resources',
             'view booking request',
             'view all booking logs',

@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreBookingLogRequest;
 use App\Http\Requests\StoreBookingRequest;
+use App\Http\Requests\StoreDateRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Models\BookingLog;
+use App\Models\Resource;
+use App\Models\ResourceType;
 use App\Services\BookingService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -20,7 +24,7 @@ class BookingController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $bookings = Booking::latest()->get();
+            $bookings = Booking::with(['user', 'resource'])->latest()->get();
 
             if ($bookings->isEmpty()) {
                 return response()->json([
@@ -57,6 +61,40 @@ class BookingController extends Controller
             ], 400);
         }
     }
+
+    public function getBookingsByDate(StoreDateRequest $request): JsonResponse
+    {
+        try {
+            $date = $request->validated()['date'];
+
+            if (!$date) {
+                return response()->json(['error' => 'Date parameter is required'], 400);
+            }
+
+            $targetDate = Carbon::parse($date)->startOfDay();
+            $nextDate = Carbon::parse($date)->endOfDay();
+
+            $bookings = Booking::where(function ($query) use ($targetDate, $nextDate) {
+                $query->where('start_time', '<=', $nextDate)
+                    ->where('end_time', '>=', $targetDate);
+            })
+                ->with(['user', 'resource'])
+                ->get();
+
+            return response()->json($bookings);
+        } catch (\Exception $error) {
+            return response()->json([
+                'error' => $error->getMessage()
+            ], 400);
+        }
+    }
+
+
+    // public function bookingsByUserRole(Resource $resource){
+
+    //     $resourceTypes = ResourceType::with('resources.booking')->where("id",1)->get();
+    //    // $booking = Booking::with("resource.resource_types")->get();
+    // }
 
     /**
      * Store a newly created resource in storage.
@@ -113,7 +151,7 @@ class BookingController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateBookingRequest $request,BookingService $bookingService, StoreBookingLogRequest $bookingLogRequest, Booking $book)
+    public function update(UpdateBookingRequest $request, BookingService $bookingService, StoreBookingLogRequest $bookingLogRequest, Booking $book)
     {
         try {
             $attributes = $request->validated();
@@ -121,7 +159,7 @@ class BookingController extends Controller
             $bookingLogAttributes = $bookingLogRequest->validated();
 
 
-           $result = $bookingService->updateBooking($attributes, $bookingLogAttributes, $book);
+            $result = $bookingService->updateBooking($attributes, $bookingLogAttributes, $book);
             if (isset($result['error'])) {
                 return response()->json([
                     'error' => $result['error']
@@ -172,7 +210,7 @@ class BookingController extends Controller
         try {
 
             Gate::authorize('approve', $book);
-            
+
             if ($book->status !== 'pending') {
                 return response()->json([
                     'error' => 'Booking cannot be approved as it is not in pending status.'

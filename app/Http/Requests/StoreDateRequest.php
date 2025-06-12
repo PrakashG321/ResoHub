@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateResourceRequest extends FormRequest
+class StoreDateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,10 +22,7 @@ class UpdateResourceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:20',
-            'resource_type_id' => 'required|integer|exists:resource_types,id',
-            'description' => 'required|string|max:255',
-            'capacity' => 'required|integer|max:100',
+            'date' => 'required|date_format:Y-m-d'
         ];
     }
 }

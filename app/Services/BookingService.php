@@ -55,7 +55,7 @@ class BookingService
                 return ["error" => "Resource is already booked during the requested time.", "code" => 400];
             }
 
-
+            $attributes['status'] = 'pending';
             $book = Booking::create($attributes);
 
             $bookingLogAttributes['changed_by'] = Auth::id();
@@ -126,6 +126,8 @@ class BookingService
             $bookingLogAttributes['changed_by'] = Auth::id();
             $bookingLogAttributes['booking_id'] = $book->id;
             $bookingLogAttributes['status'] = $book->status;
+
+           
 
             BookingLog::create($bookingLogAttributes);
 
