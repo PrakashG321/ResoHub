@@ -81,10 +81,10 @@ class BookingPolicy
         }
 
         $roleResourceMap = [
-            'computerLabSupervisor' => 'Lab',
-            'librarySupervisor' => 'Library',
-            'venueSupervisor' => 'Venue',
-            'sportsEquipmentSupervisor' => 'Sports',
+            'computer_lab_supervisor' => 'Lab',
+            'library_supervisor' => 'Library',
+            'venue_hall_supervisor' => 'Venue',
+            'sports_equipment_supervisor' => 'Sports',
         ];
 
         foreach ($roleResourceMap as $role => $resourceType) {

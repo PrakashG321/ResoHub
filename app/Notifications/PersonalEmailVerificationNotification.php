@@ -9,31 +9,23 @@ use Illuminate\Support\Facades\URL;
 
 class PersonalEmailVerificationNotification extends VerifyEmail
 {
-    /**
-     * Generate the verification URL that points to your React frontend.
-     */
     protected function verificationUrl($notifiable)
     {
         $frontendBaseUrl = config('app.frontend_url', 'http://localhost:5173');
         $backendBaseUrl = config('app.url', 'http://localhost:8000');
 
-        // Generate signed URL for backend route
         $signedUrl = URL::temporarySignedRoute(
             'verification.verify',
-            Carbon::now()->addMinutes(60),
+            Carbon::now()->addDays(7),
             [
                 'id' => $notifiable->getKey(),
-                'hash' => sha1($notifiable->personal_email), // Make sure this is personal_email
+                'hash' => sha1($notifiable->personal_email),
             ]
         );
 
-        // Replace backend URL base with frontend base, preserving the signature query param
         return str_replace($backendBaseUrl . '/api', $frontendBaseUrl, $signedUrl);
     }
 
-    /**
-     * Build the mail message for verification email.
-     */
     public function toMail($notifiable)
     {
         $verificationUrl = $this->verificationUrl($notifiable);

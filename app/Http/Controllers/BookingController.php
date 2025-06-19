@@ -8,8 +8,6 @@ use App\Http\Requests\StoreDateRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Models\BookingLog;
-use App\Models\Resource;
-use App\Models\ResourceType;
 use App\Services\BookingService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +22,41 @@ class BookingController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $bookings = Booking::with(['user', 'resource'])->latest()->get();
+            $user = Auth::user(); // Get currently authenticated user
+
+            // Define role → resource type mapping
+            $roleResourceMap = [
+                'computer_lab_supervisor' => 'Lab',
+                'library_supervisor' => 'Library',
+                'venue_hall_supervisor' => 'Venue',
+                'sports_equipment_supervisor' => 'Sports',
+            ];
+
+            // Default: no filtering for admin
+            $resourceTypeName = null;
+
+            // If not admin, try to get their resource type
+            if (!$user->hasRole('admin')) {
+                foreach ($roleResourceMap as $role => $resourceType) {
+                    if ($user->hasRole($role)) {
+                        $resourceTypeName = $resourceType;
+                        break;
+                    }
+                }
+            }
+
+            // Base query with eager loads
+            $query = Booking::with(['user', 'resource.resource_type'])->latest();
+
+            // Apply filter if resource type was detected
+            if ($resourceTypeName) {
+                $query->whereHas('resource.resource_type', function ($q) use ($resourceTypeName) {
+                    $q->where('name', $resourceTypeName);
+                });
+            }
+
+            // Paginate filtered result
+            $bookings = $query->paginate(10);
 
             if ($bookings->isEmpty()) {
                 return response()->json([
@@ -42,10 +74,11 @@ class BookingController extends Controller
         }
     }
 
+
     public function showOwnBooking(): JsonResponse
     {
         try {
-            $bookings = Booking::where('user_id', Auth::id())->get();
+            $bookings = Booking::with("resource")->where('user_id', Auth::id())->paginate(10);
 
             if ($bookings->isEmpty()) {
                 return response()->json([
@@ -88,13 +121,6 @@ class BookingController extends Controller
             ], 400);
         }
     }
-
-
-    // public function bookingsByUserRole(Resource $resource){
-
-    //     $resourceTypes = ResourceType::with('resources.booking')->where("id",1)->get();
-    //    // $booking = Booking::with("resource.resource_types")->get();
-    // }
 
     /**
      * Store a newly created resource in storage.
@@ -242,7 +268,7 @@ class BookingController extends Controller
     {
         try {
 
-            Gate::authorize('approve', $book);
+            Gate::authorize('reject', $book);
             if ($book->status != 'pending') {
                 return response()->json([
                     'error' => 'Booking cannot be approved as it is not in pending status.'

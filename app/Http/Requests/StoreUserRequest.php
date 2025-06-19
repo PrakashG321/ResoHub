@@ -26,7 +26,7 @@ class StoreUserRequest extends FormRequest
             'email'    => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'personal_email' => ['required', 'email'],
-            'role' => ['required', 'string', 'in:student,faculty']
+            'role' => ['required', 'string', 'in:student,faculty,computer_lab_supervisor,venue_hall_supervisor,library_supervisor,sports_equipment_supervisor']
 
         ];
     }

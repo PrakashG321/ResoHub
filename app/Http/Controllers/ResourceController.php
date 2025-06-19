@@ -15,7 +15,7 @@ class ResourceController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $resources = Resource::latest()->get();
+            $resources = Resource::with('resource_type')->latest()->get();
 
             if ($resources->isEmpty()) {
                 return response()->json([
