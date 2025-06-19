@@ -15,7 +15,27 @@ class ResourceController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $resources = Resource::latest()->get();
+            $resources = Resource::with('resource_type')->latest()->get();
+
+            if ($resources->isEmpty()) {
+                return response()->json([
+                    "message" => "No resources found"
+                ], 200);
+            }
+            return response()->json([
+                "resource" => $resources
+            ], 201);
+        } catch (\Exception $error) {
+            return response()->json([
+                "error" => $error->getMessage()
+            ], 400);
+        }
+    }
+
+    public function resourceUsers()
+    {
+        try {
+            $resources = Resource::with("resource_type")->where("status","!=","under_maintenance")->latest()->get();
 
             if ($resources->isEmpty()) {
                 return response()->json([
@@ -57,11 +77,6 @@ class ResourceController extends Controller
     public function show(Resource $resource): JsonResponse
     {
         try {
-            if ($resource->isEmpty()) {
-                return response()->json([
-                    "message" => "no resource found for this id"
-                ], 200);
-            }
             return response()->json([
                 "resource" => $resource
             ], 201);

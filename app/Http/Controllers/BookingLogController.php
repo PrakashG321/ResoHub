@@ -17,16 +17,46 @@ class BookingLogController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $bookingLog = BookingLog::latest()->get();
+            $user = Auth::user();
 
-            if ($bookingLog->isEmpty()) {
+            $bookingLogsQuery = BookingLog::with('booking.resource.resource_type')->latest();
+
+            $roleResourceMap = [
+                 'computer_lab_supervisor' => 'Lab',
+                'library_supervisor' => 'Library',
+                'venue_hall_supervisor' => 'Venue',
+                'sports_equipment_supervisor' => 'Sports',
+            ];
+
+            // Filter only if not admin
+            if (!$user->hasRole('admin')) {
+                $resourceTypeName = null;
+
+                foreach ($roleResourceMap as $role => $resourceType) {
+                    if ($user->hasRole($role)) {
+                        $resourceTypeName = $resourceType;
+                        break;
+                    }
+                }
+
+                // Apply filter if a matching resource type was found
+                if ($resourceTypeName) {
+                    $bookingLogsQuery->whereHas('booking.resource.resource_type', function ($query) use ($resourceTypeName) {
+                        $query->where('name', $resourceTypeName);
+                    });
+                }
+            }
+
+            $paginatedLogs = $bookingLogsQuery->paginate(10);
+
+            if ($paginatedLogs->isEmpty()) {
                 return response()->json([
-                    "message" => "no bookinglogs found"
+                    "message" => "No booking logs found"
                 ], 200);
             }
 
             return response()->json([
-                "bookingLog" => $bookingLog
+                "bookingLog" => $paginatedLogs
             ], 200);
         } catch (\Exception $error) {
             return response()->json([
@@ -35,11 +65,13 @@ class BookingLogController extends Controller
         }
     }
 
+
+
     public function showOwnBookingLog(): JsonResponse
     {
         try {
             $bookingIds = Booking::where('user_id', Auth::id())->pluck('id');
-            $bookingLogs = BookingLog::whereIn('booking_id', $bookingIds)->get();
+            $bookingLogs = BookingLog::whereIn('booking_id', $bookingIds)->paginate(10);
             return response()->json([
                 'bookingLogs' => $bookingLogs
             ], 200);
@@ -47,25 +79,6 @@ class BookingLogController extends Controller
             return response()->json([
                 "error" => $error->getMessage()
             ]);
-        }
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreBookingLogRequest $request): JsonResponse
-    {
-        try {
-            $attributes = $request->validated();
-            $bookingLogs = BookingLog::create($attributes);
-            return response()->json([
-                "message" => "Bookking Log created successfully",
-                "bookingLogs" => $bookingLogs
-            ], 200);
-        } catch (\Exception $error) {
-            return response()->json([
-                "error" => $error->getMessage()
-            ], 500);
         }
     }
 }
